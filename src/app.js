@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const logger = require("morgan");
 const bodyParser = require("body-parser");
 const app = express();
+const v1 = require("./routes/v1");
+const passport = require("passport");
 
 // DB Config
 
@@ -22,13 +24,24 @@ mongoose.connection.on("error", (err) => {
 app.use(logger("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use(passport.initialize());
+app.use(passport.session());
+require("./config/passport")(passport);
 // Routes
-app.post("/hello", (req, res) => {
-  const name = req.body.name;
-  res.send({
-    message: `welcome ${name}`,
-  });
+app.use("/api/v1", v1);
+
+// Errors
+
+app.use((req, res, next) => {
+  var err = new Error("Not Found");
+  err.status = 404;
+  next(err);
+});
+
+app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  const error = err.message || "Error Processing Your Request";
+  res.status(status).send({ error });
 });
 
 module.exports = app;
